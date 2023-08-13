@@ -10,7 +10,8 @@ namespace Dump2Cs
         {
             string inputFileContent = File.ReadAllText("dump.cs");
 
-            inputFileContent = Regex.Replace(inputFileContent, @"//.*|/\*(.|\n)*?\*/", "");
+            Console.WriteLine("Do you want to remove comments from generated files? (y/n)");
+            bool removeComments = Console.ReadLine().ToLower() == "y";
 
             MatchCollection classMatches = Regex.Matches(inputFileContent, @"class\s+[A-Za-z_]\w*\s*{[^}]*}");
 
@@ -29,10 +30,10 @@ namespace Dump2Cs
 
                 string newClassContent = $@"
 using System;
-//Dump2Cs go crazy
+
 namespace Dump2Cs
 {{
-    {classContent}
+    {RemoveCommentsFromCode(classContent, removeComments)}
 }}
 ";
 
@@ -49,6 +50,16 @@ namespace Dump2Cs
         {
             Console.WriteLine("Press Enter to exit...");
             while (Console.ReadKey().Key != ConsoleKey.Enter) { }
+        }
+
+        static string RemoveCommentsFromCode(string code, bool removeComments)
+        {
+            if (removeComments)
+            {
+                code = Regex.Replace(code, @"//.*", "");
+                code = Regex.Replace(code, @"/\*(.|\n)*?\*/", "");
+            }
+            return code;
         }
     }
 }
