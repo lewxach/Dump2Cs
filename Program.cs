@@ -8,6 +8,18 @@ namespace Dump2Cs
     {
         static void Main(string[] args)
         {
+            Console.Write("Do you want to start the process? (y/n): ");
+            if (Console.ReadLine().Trim().ToLower() != "y")
+            {
+                Console.WriteLine("Process cancelled.");
+                WaitForEnterKey();
+                return;
+            }
+
+            Console.Write("Do you want to remove comments? (y/n): ");
+            bool removeComments = Console.ReadLine().Trim().ToLower() == "y";
+
+            Console.WriteLine("Read input file.");
             string inputFileContent = File.ReadAllText("dump.cs");
 
             inputFileContent = Regex.Replace(inputFileContent, @"//.*|/\*(.|\n)*?\*/", "");
@@ -21,61 +33,30 @@ namespace Dump2Cs
                 return;
             }
 
+            Directory.CreateDirectory("DumpedScripts"); // Create directory if it doesn't exist
+
             int classNumber = 1;
             foreach (Match match in classMatches)
             {
                 string classContent = match.Value;
-                string namespaceName = Regex.Match(classContent, @"namespace\s+([A-Za-z_]\w*)").Groups[1].Value;
                 string className = Regex.Match(classContent, @"class\s+([A-Za-z_]\w*)").Groups[1].Value;
 
-                if (string.IsNullOrEmpty(namespaceName))
-                {
-                    namespaceName = "NoNamespace";
-                }
-
-                GenerateClassFile(classContent, namespaceName, className, true);
-                Console.WriteLine($"Generated {namespaceName}.{className}.cs");
+                GenerateClassFile(classContent, className, removeComments);
+                Console.WriteLine($"Generated DumpedScripts/{className}.cs");
                 classNumber++;
             }
 
             Console.WriteLine("Files generated successfully.");
             WaitForEnterKey();
         }
-        static void ProcessNamespace(string namespaceName, string namespaceContent, bool removeComments)
+
+        static void WaitForEnterKey()
         {
-            if (string.IsNullOrEmpty(namespaceName))
-            {
-                namespaceName = "NoNamespace";
-            }
-
-            string[] lines = namespaceContent.Split('\n');
-            foreach (string line in lines)
-            {
-                if (line.Trim().StartsWith("// Namespace:"))
-                {
-                    namespaceName = line.Trim().Replace("// Namespace:", "").Trim();
-                    break;
-                }
-            }
-
-            MatchCollection classMatches = Regex.Matches(namespaceContent, @"class\s+[A-Za-z_]\w*\s*{[^}]*}");
-
-            if (classMatches.Count == 0)
-            {
-                Console.WriteLine($"No class content found for namespace: {namespaceName}");
-                return;
-            }
-
-            foreach (Match classMatch in classMatches)
-            {
-                string classContent = classMatch.Value;
-                string className = Regex.Match(classContent, @"class\s+([A-Za-z_]\w*)").Groups[1].Value;
-
-                GenerateClassFile(classContent, namespaceName, className, removeComments);
-            }
+            Console.WriteLine("Press Enter to exit...");
+            while (Console.ReadKey().Key != ConsoleKey.Enter) { }
         }
 
-        static void GenerateClassFile(string classContent, string namespaceName, string className, bool removeComments)
+        static void GenerateClassFile(string classContent, string className, bool removeComments)
         {
             if (!string.IsNullOrEmpty(classContent))
             {
@@ -85,27 +66,20 @@ namespace Dump2Cs
                     newClassContent = Regex.Replace(classContent, @"//.*|/\*(.|\n)*?\*/", "");
                 }
 
-                string fullNamespace = !string.IsNullOrEmpty(namespaceName) ? $"{namespaceName}." : string.Empty;
-                string fileName = $"{fullNamespace}{className}.cs";
-
+                string filePath = Path.Combine("DumpedScripts", $"{className}.cs");
                 string newClassFileContent = $@"
 using System;
 
-namespace {fullNamespace}{{
+namespace {className}
+{{
     {newClassContent}
 }}
 ";
 
-                File.WriteAllText(fileName, newClassFileContent);
-                Console.WriteLine($"Generated {fileName}");
+                File.WriteAllText(filePath, newClassFileContent);
+                Console.WriteLine($"Generated {filePath}");
             }
         }
 
-
-        static void WaitForEnterKey()
-        {
-            Console.WriteLine("Press Enter to exit...");
-            while (Console.ReadKey().Key != ConsoleKey.Enter) { }
-        }
     }
 }
